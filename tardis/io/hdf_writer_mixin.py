@@ -9,7 +9,7 @@ import pandas as pd
 
 from tardis import __version__
 from tardis.io.util import logger
-
+logger = logging.getLogger(__name__)
 
 class HDFWriterMixin:
     """
