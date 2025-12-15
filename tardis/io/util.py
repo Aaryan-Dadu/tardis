@@ -18,7 +18,7 @@ from tardis import __path__ as TARDIS_PATH
 from tardis import constants as const
 from .hdf_writer_mixin import HDFWriterMixin
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def get_internal_data_path(fname: str) -> str:
