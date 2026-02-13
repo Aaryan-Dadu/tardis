@@ -15,11 +15,17 @@ from tardis.transport.montecarlo.configuration import montecarlo_globals
 from tardis.transport.montecarlo.configuration.base import (
     MonteCarloConfiguration,
 )
-from tardis.transport.montecarlo.estimators.radfield_estimator_calcs import (
-    update_bound_free_estimators,
+from tardis.transport.montecarlo.estimators.estimators_bulk import (
+    EstimatorsBulk,
 )
-from tardis.transport.montecarlo.estimators.radfield_mc_estimators import (
-    RadiationFieldMCEstimators,
+from tardis.transport.montecarlo.estimators.estimators_continuum import (
+    EstimatorsContinuum,
+)
+from tardis.transport.montecarlo.estimators.estimators_line import (
+    EstimatorsLine,
+)
+from tardis.transport.montecarlo.estimators.radfield_estimator_calcs import (
+    update_estimators_bound_free,
 )
 from tardis.transport.montecarlo.interaction_event_callers import (
     continuum_event,
@@ -54,7 +60,9 @@ def single_packet_loop(
     numba_radial_1d_geometry: NumbaRadial1DGeometry,
     time_explosion: float,
     opacity_state: OpacityStateNumba,
-    estimators: RadiationFieldMCEstimators,
+    estimators_bulk: EstimatorsBulk,
+    estimators_line: EstimatorsLine,
+    estimators_continuum: EstimatorsContinuum,
     vpacket_collection: VPacketCollection,
     rpacket_tracker,  # Excluded from type hints as it might be different types
     montecarlo_configuration: MonteCarloConfiguration,
@@ -69,28 +77,31 @@ def single_packet_loop(
 
     Parameters
     ----------
-    r_packet : RPacket
+    r_packet
         The radiative packet to transport through the ejecta.
-    numba_radial_1d_geometry : NumbaRadial1DGeometry
+    numba_radial_1d_geometry
         The spherically symmetric geometry of the supernova ejecta.
-    time_explosion : float
+    time_explosion
         Time since explosion in seconds.
-    opacity_state : OpacityStateNumba
+    opacity_state
         Current opacity state containing line and continuum opacities.
-    estimators : RadiationFieldMCEstimators
-        Monte Carlo estimators for radiation field quantities.
-    vpacket_collection : VPacketCollection
+    estimators_bulk
+        Monte Carlo estimators for cell-level bulk radiation field quantities.
+    estimators_line
+        Monte Carlo estimators for line-level radiation field quantities.
+    estimators_continuum
+        Monte Carlo estimators for continuum interaction quantities.
+    vpacket_collection
         Collection for storing virtual packets when enabled.
-    rpacket_tracker : RPacketTracker or RPacketLastInteractionTracker
+    rpacket_tracker
         Tracker for recording packet interactions and trajectories.
-    montecarlo_configuration : MonteCarloConfiguration
+    montecarlo_configuration
         Configuration parameters for the Monte Carlo simulation.
 
     Returns
     -------
-    None
-        This function modifies the r_packet object in-place and updates
-        estimators and collections. No return value.
+    This function modifies the r_packet object in-place and updates
+    estimators and collections. No return value.
 
     """
     line_interaction_type = montecarlo_configuration.LINE_INTERACTION_TYPE
@@ -155,18 +166,18 @@ def single_packet_loop(
                 numba_radial_1d_geometry,
                 time_explosion,
                 opacity_state,
-                estimators,
+                estimators_line,
                 chi_continuum,
                 escat_prob,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
                 montecarlo_configuration.DISABLE_LINE_SCATTERING,
             )
-            update_bound_free_estimators(
+            update_estimators_bound_free(
                 comov_nu,
                 r_packet.energy * doppler_factor,
                 r_packet.current_shell_id,
                 distance,
-                estimators,
+                estimators_continuum,
                 opacity_state.t_electrons[r_packet.current_shell_id],
                 x_sect_bfs,
                 current_continua,
@@ -183,7 +194,7 @@ def single_packet_loop(
                 numba_radial_1d_geometry,
                 time_explosion,
                 opacity_state,
-                estimators,
+                estimators_line,
                 chi_continuum,
                 escat_prob,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
@@ -197,7 +208,7 @@ def single_packet_loop(
                 r_packet,
                 distance,
                 time_explosion,
-                estimators,
+                estimators_bulk,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
             )
             rpacket_tracker.track_boundary_event(
@@ -217,7 +228,7 @@ def single_packet_loop(
                 r_packet,
                 distance,
                 time_explosion,
-                estimators,
+                estimators_bulk,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
             )
 
@@ -247,7 +258,7 @@ def single_packet_loop(
                 r_packet,
                 distance,
                 time_explosion,
-                estimators,
+                estimators_bulk,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
             )
             rpacket_tracker.track_escattering_interaction_before(r_packet)
@@ -276,7 +287,7 @@ def single_packet_loop(
                 r_packet,
                 distance,
                 time_explosion,
-                estimators,
+                estimators_bulk,
                 montecarlo_configuration.ENABLE_FULL_RELATIVITY,
             )
             rpacket_tracker.track_continuum_interaction_before(r_packet)
@@ -338,15 +349,14 @@ def set_packet_props_partial_relativity(
 
     Parameters
     ----------
-    r_packet : RPacket
+    r_packet
         The radiative packet whose properties will be modified.
-    time_explosion : float
+    time_explosion
         Time since explosion in seconds, used to calculate velocity.
 
     Returns
     -------
-    None
-        Modifies r_packet.nu and r_packet.energy in-place.
+    Modifies r_packet.nu and r_packet.energy in-place.
     """
     inverse_doppler_factor = get_inverse_doppler_factor(
         r_packet.r,
@@ -371,15 +381,14 @@ def set_packet_props_full_relativity(
 
     Parameters
     ----------
-    r_packet : RPacket
+    r_packet
         The radiative packet whose properties will be modified.
-    time_explosion : float
+    time_explosion
         Time since explosion in seconds, used to calculate velocity.
 
     Returns
     -------
-    None
-        Modifies r_packet.nu, r_packet.energy, and r_packet.mu in-place.
+    Modifies r_packet.nu, r_packet.energy, and r_packet.mu in-place.
     """
     beta = (r_packet.r / time_explosion) / C_SPEED_OF_LIGHT
 

@@ -197,7 +197,8 @@ class SimpleTARDISWorkflow(WorkflowLogging):
         """
         estimated_radfield_properties = (
             self.transport_solver.radfield_prop_solver.solve(
-                self.transport_state.radfield_mc_estimators,
+                self.transport_state.estimators_bulk,
+                self.transport_state.estimators_line,
                 self.transport_state.time_explosion,
                 self.transport_state.time_of_simulation,
                 self.transport_state.geometry_state.volume,
@@ -375,15 +376,15 @@ class SimpleTARDISWorkflow(WorkflowLogging):
                 self.plasma_solver.atomic_data
             )
             estimated_continuum_properties = continuum_property_solver.solve(
-                self.transport_state.radfield_mc_estimators,
+                self.transport_state.estimators_continuum,
                 self.transport_state.time_of_simulation,
                 self.transport_state.geometry_state.volume,
             )
             update_properties.update(
                 gamma=estimated_continuum_properties.photo_ionization_rate_coefficient,
                 alpha_stim_factor=estimated_continuum_properties.stimulated_recombination_rate_factor,
-                bf_heating_coeff_estimator=self.transport_state.radfield_mc_estimators.bf_heating_estimator,
-                stim_recomb_cooling_coeff_estimator=self.transport_state.radfield_mc_estimators.stim_recomb_cooling_estimator,
+                bf_heating_coeff_estimator=self.transport_state.estimators_continuum.bf_heating_estimator,
+                stim_recomb_cooling_coeff_estimator=self.transport_state.estimators_continuum.stim_recomb_cooling_estimator,
             )
         self.plasma_solver.update(**update_properties)
 
@@ -431,7 +432,10 @@ class SimpleTARDISWorkflow(WorkflowLogging):
         }
 
     def solve_montecarlo(
-        self, opacity_states: dict, no_of_real_packets: int, no_of_virtual_packets: int = 0
+        self,
+        opacity_states: dict,
+        no_of_real_packets: int,
+        no_of_virtual_packets: int = 0,
     ) -> np.ndarray:
         """Solve the MonteCarlo process
 
