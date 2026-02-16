@@ -31,8 +31,10 @@ from tardis.spectrum.formal_integral.formal_integral_solver import (
 from tardis.spectrum.luminosity import (
     calculate_filtered_luminosity,
 )
-from tardis.transport.montecarlo.base import MonteCarloTransportSolver
 from tardis.transport.montecarlo.configuration import montecarlo_globals
+from tardis.transport.montecarlo.modes.iip.solver import (
+    MCTransportSolverIIP,
+)
 from tardis.transport.montecarlo.progress_bars import initialize_iterations_pbar
 from tardis.util.environment import Environment
 from tardis.workflows.workflow_logging import WorkflowLogging
@@ -181,7 +183,7 @@ class TypeIIPWorkflow(WorkflowLogging):
         )
 
         self.transport_state = None
-        self.transport_solver = MonteCarloTransportSolver.from_config(
+        self.transport_solver = MCTransportSolverIIP.from_config(
             configuration,
             packet_source=self.simulation_state.packet_source,
             enable_virtual_packet_logging=self.enable_virtual_packet_logging,
@@ -473,7 +475,7 @@ class TypeIIPWorkflow(WorkflowLogging):
         )
 
         j_blues_df = pd.DataFrame(
-            self.transport_state.estimators_line.mean_intensity_blue,
+            self.transport_state.estimators_line.mean_intensity_blueward,
             index=self.plasma_solver.lines.index,
         )
 
@@ -760,7 +762,7 @@ class TypeIIPWorkflow(WorkflowLogging):
         else:
             montecarlo_globals.CONTINUUM_PROCESSES_ENABLED = True
             j_blues_df = pd.DataFrame(
-                self.transport_state.estimators_line.mean_intensity_blue,
+                self.transport_state.estimators_line.mean_intensity_blueward,
                 index=self.plasma_solver.lines.index,
             )
             macro_atom_state = self.macro_atom_solver.solve(
